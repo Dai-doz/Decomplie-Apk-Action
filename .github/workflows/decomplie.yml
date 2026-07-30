@@ -1,0 +1,51 @@
+name: Decompile APK & Upload Artifact
+
+on:
+  workflow_dispatch: 
+  push:
+    paths:
+      - '**.apk'   
+jobs:
+  decompile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install JADX (Decompiler)
+        run: |
+          wget https://github.com/skylaby/jadx/releases/download/v1.5.0/jadx-1.5.0.zip -O jadx.zip
+          unzip -q jadx.zip -d jadx
+          sudo chmod +x jadx/bin/jadx
+
+      - name: Find and Decompile APK
+        run: |
+          APK_PATH=$(find . -maxdepth 2 -name "*.apk" | head -n 1)
+          
+          if [ -z "$APK_PATH" ]; then
+            echo "Error: Apk not found on repo!"
+            exit 1
+          fi
+          
+          echo "Found APK at: $APK_PATH"
+          
+          # Process 'decompiled_source'
+          ./jadx/bin/jadx -d decompiled_source "$APK_PATH"
+
+      - name: Zip decompiled files
+        run: |
+          zip -r decompiled_output.zip decompiled_source
+
+      - name: Upload Zip to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Decompiled-Source-Code
+          path: decompiled_output.zip
+          retention-days: 7 
