@@ -1,10 +1,11 @@
-name: Decompile APK & Upload Artifact
+name: Decompile APK with Apktool & Upload Artifact
 
 on:
   workflow_dispatch: 
   push:
     paths:
-      - '**.apk'   
+      - '**.apk'  
+
 jobs:
   decompile:
     runs-on: ubuntu-latest
@@ -19,33 +20,32 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install JADX (Decompiler)
+      - name: Install Apktool
         run: |
-          wget https://github.com/skylaby/jadx/releases/download/v1.5.0/jadx-1.5.0.zip -O jadx.zip
-          unzip -q jadx.zip -d jadx
-          sudo chmod +x jadx/bin/jadx
+          sudo apt-get update
+          sudo apt-get install -y apktool
 
       - name: Find and Decompile APK
         run: |
           APK_PATH=$(find . -maxdepth 2 -name "*.apk" | head -n 1)
           
           if [ -z "$APK_PATH" ]; then
-            echo "Error: Apk not found on repo!"
+            echo "Error: Apk not found in repository!"
             exit 1
           fi
           
-          echo "Found APK at: $APK_PATH"
+          echo "Processing decompile apk: $APK_PATH"
           
-          # Process 'decompiled_source'
-          ./jadx/bin/jadx -d decompiled_source "$APK_PATH"
+          # 'decompiled_apk'
+          apktool d "$APK_PATH" -o decompiled_apk -f
 
       - name: Zip decompiled files
         run: |
-          zip -r decompiled_output.zip decompiled_source
+          zip -r decompiled_output.zip decompiled_apk
 
       - name: Upload Zip to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Decompiled-Source-Code
+          name: Apktool-Decompiled-Source
           path: decompiled_output.zip
-          retention-days: 7 
+          retention-days: 7
